@@ -81,13 +81,15 @@ function hash(data) {
 function hashHeap(data) {
   // This copies the data to the heap
   // first to avoid a stack overflow.
-  const input = wasm.store(data);
   const save = wasm.save();
+  const [input, heap] = wasm.maybePush(data, save);
   const out = wasm.alloc(32);
 
   wasm.call('keccak_digest', out, input, data.length, 32, 0x06);
   wasm.restore(save);
-  wasm.free(input);
+
+  if (heap)
+    wasm.free(input);
 
   return wasm.read(out, 32);
 }
