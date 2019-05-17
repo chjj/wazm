@@ -1,0 +1,28 @@
+{
+  "name": "wazm",
+  "version": "0.0.0",
+  "description": "WASM build tool",
+  "keywords": [
+    "assembly",
+    "wasm",
+    "web"
+  ],
+  "license": "MIT",
+  "repository": "git://github.com/chjj/wazm.git",
+  "homepage": "https://github.com/chjj/wazm",
+  "bugs": {
+    "url": "https://github.com/chjj/wazm/issues"
+  },
+  "author": "Christopher Jeffrey <chjjeffrey@gmail.com>",
+  "main": "./lib/wazm.js",
+  "bin": {
+    "bpkg": "./bin/bpkg"
+  },
+  "scripts": {
+    "lint": "eslint bin/* example/*.js lib/*.js test/*.js || exit 0",
+    "test": "bmocha --reporter spec test/*-test.js"
+  },
+  "engines": {
+    "node": ">=8.0.0"
+  }
+}

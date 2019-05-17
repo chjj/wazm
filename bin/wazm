@@ -1,0 +1,326 @@
+#!/usr/bin/env node
+
+/*!
+ * wazm - wrapper for emcc
+ * Copyright (c) 2019, Christopher Jeffrey (MIT License).
+ * https://github.com/chjj/wazm
+ */
+
+'use strict';
+
+const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
+const url = require('url');
+const build = require('../lib/build');
+
+/*
+ * Constants
+ */
+
+const VERSION = '0.0.0';
+
+const HELP = `
+  Usage: wazm [options] [config?]
+
+  Options:
+
+    -h, --help                output usage information
+    -v, --version             output the version number
+    -r, --root <path>         root directory (default: cwd)
+    -o, --output <file>       output file (default: out.wasm)
+    -e, --export <symbol>     export symbol
+    -m, --total-memory <mem>  total memory (in pages) (default: 3)
+    -S, --total-stack <mem>   total stack (in pages) (default: 1)
+    -M, --max-memory <mem>    total stack (in pages) (default: null)
+    -b, --base64              output as base64 module
+    -w, --wat                 output an accompanying .wat file
+    -g, --grow                allow heap growth
+    -O[x]                     optimization level
+    -s <OPTION=VALUE>         pass flag to emcc
+    -- <args>                 pass remaining args to emcc
+`;
+
+/*
+ * Main
+ */
+
+async function main(argv) {
+  const args = getArgs(argv);
+
+  const options = {
+    root: null,
+    input: [],
+    output: null,
+    exports: [],
+    memory: {
+      total: null,
+      stack: null,
+      max: null
+    },
+    base64: null,
+    wat: null,
+    grow: null,
+    args: [],
+    flags: []
+  };
+
+  for (let i = 2; i < args.length; i++) {
+    const arg = args[i];
+
+    let next = '';
+
+    if (i + 1 < args.length)
+      next = args[i + 1];
+
+    switch (arg) {
+      case '-v':
+      case '--version': {
+        process.stdout.write(VERSION + '\n');
+        process.exit(0);
+        break;
+      }
+
+      case '-h':
+      case '--help': {
+        process.stdout.write(HELP + '\n');
+        process.exit(0);
+        break;
+      }
+
+      case '-r':
+      case '--root': {
+        if (!next || next[0] === '-')
+          throw new Error(`Invalid option for: ${arg}.`);
+
+        options.root = next;
+        i += 1;
+
+        break;
+      }
+
+      case '-o':
+      case '--output': {
+        if (!next || next[0] === '-')
+          throw new Error(`Invalid option for: ${arg}.`);
+
+        options.output = next;
+        i += 1;
+
+        break;
+      }
+
+      case '-e':
+      case '--export': {
+        if (!next || next[0] === '-')
+          throw new Error(`Invalid option for: ${arg}.`);
+
+        options.exports(...next.split(','));
+        i += 1;
+
+        break;
+      }
+
+      case '-m':
+      case '--total-memory': {
+        if (!next || next[0] === '-')
+          throw new Error(`Invalid option for: ${arg}.`);
+
+        options.memory.total = next >>> 0;
+        i += 1;
+        break;
+      }
+
+      case '-S':
+      case '--total-stack': {
+        if (!next || next[0] === '-')
+          throw new Error(`Invalid option for: ${arg}.`);
+
+        options.memory.stack = next >>> 0;
+        i += 1;
+        break;
+      }
+
+      case '-M':
+      case '--max-memory': {
+        if (!next || next[0] === '-')
+          throw new Error(`Invalid option for: ${arg}.`);
+
+        options.memory.max = next >>> 0;
+        i += 1;
+        break;
+      }
+
+      case '-b':
+      case '--base64': {
+        options.base64 = true;
+        break;
+      }
+
+      case '-w':
+      case '--wat': {
+        options.wat = true;
+        break;
+      }
+
+      case '-g':
+      case '--grow': {
+        options.grow = true;
+        break;
+      }
+
+      case '-O0':
+      case '-O1':
+      case '-O2':
+      case '-O3':
+      case '-Os':
+      case '-Oz': {
+        options.args.push(arg);
+        break;
+      }
+
+      case '-s': {
+        if (!next || next[0] === '-')
+          throw new Error(`Invalid option for: ${arg}.`);
+
+        options.flags.push(next);
+        i += 1;
+        break;
+      }
+
+      case '--': {
+        options.args.push(...args.slice(i + 1));
+        i = args.length;
+        break;
+      }
+
+      default: {
+        options.input.push(arg);
+        break;
+      }
+    }
+  }
+
+  if (options.input.length === 1) {
+    const file = path.resolve(options.input[0]);
+    const ext = path.extname(file);
+
+    if (ext === '.json') {
+      const text = fs.readFileSync(file, 'utf8');
+      const json = JSON.parse(text);
+
+      options.input.length = 0;
+
+      return build(mergeOptions(options, json));
+    }
+
+    if (ext === '.js' || ext === '.mjs' || ext === '.cjs') {
+      let json = null;
+
+      try {
+        const imports = new Function('file', 'return import(file);');
+        json = await imports(url.pathToFileURL(file));
+      } catch (e) {
+        json = require(file);
+      }
+
+      options.input.length = 0;
+
+      return build(mergeOptions(options, json));
+    }
+  }
+
+  return build(options);
+}
+
+/*
+ * Helpers
+ */
+
+function mergeOptions(options, json) {
+  merge(options, json);
+
+  if (json != null) {
+    merge(options.memory, json.memory);
+
+    if (Array.isArray(json.input))
+      options.input = [...json.input, ...options.input];
+
+    if (Array.isArray(json.exports))
+      options.exports = [...json.exports, ...options.exports];
+
+    if (Array.isArray(json.flags))
+      options.flags = [...json.flags, ...options.flags];
+
+    if (Array.isArray(json.args))
+      options.args = [...json.args, ...options.args];
+  }
+
+  return options;
+}
+
+function merge(out, ...args) {
+  if (out == null || typeof out !== 'object')
+    return out;
+
+  for (const obj of args) {
+    if (obj == null || typeof obj !== 'object')
+      continue;
+
+    const keys = Object.keys(obj);
+
+    for (const key of keys) {
+      if (out[key] == null)
+        out[key] = obj[key];
+    }
+  }
+
+  return out;
+}
+
+function getArgs(argv) {
+  assert(Array.isArray(argv));
+
+  const args = [];
+
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+
+    assert(typeof arg === 'string');
+
+    if (arg.startsWith('--')) {
+      // e.g. --opt
+      const index = arg.indexOf('=');
+      if (index !== -1) {
+        // e.g. --opt=val
+        args.push(arg.substring(0, index));
+        args.push(arg.substring(index + 1));
+      } else {
+        args.push(arg);
+      }
+    } else if (arg.startsWith('-')) {
+      if (arg.length > 2) {
+        // e.g. -abc
+        for (let j = 1; j < arg.length; j++)
+          args.push(`-${arg.charAt(j)}`);
+      } else {
+        // e.g. -a
+        args.push(arg);
+      }
+    } else {
+      // e.g. foo
+      args.push(arg);
+    }
+  }
+
+  return args;
+}
+
+/*
+ * Execute
+ */
+
+main(process.argv).catch((err) => {
+  process.stderr.write(err.stack + '\n');
+  process.exit(1);
+});
