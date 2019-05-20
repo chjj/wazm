@@ -33,9 +33,9 @@ const HELP = `
     -m, --total-memory <mem>  total memory (in pages) (default: 3)
     -S, --total-stack <mem>   total stack (in pages) (default: 1)
     -M, --max-memory <mem>    total stack (in pages) (default: null)
+    -g, --grow                allow heap growth
     -b, --base64              output as base64 module
     -w, --wat                 output an accompanying .wat file
-    -g, --grow                allow heap growth
     -O[x]                     optimization level
     -s <OPTION=VALUE>         pass flag to emcc
     -- <args>                 pass remaining args to emcc
@@ -56,11 +56,11 @@ async function main(argv) {
     memory: {
       total: null,
       stack: null,
-      max: null
+      max: null,
+      grow: null
     },
     base64: null,
     wat: null,
-    grow: null,
     args: [],
     flags: []
   };
@@ -151,6 +151,12 @@ async function main(argv) {
         break;
       }
 
+      case '-g':
+      case '--grow': {
+        options.memory.grow = true;
+        break;
+      }
+
       case '-b':
       case '--base64': {
         options.base64 = true;
@@ -160,12 +166,6 @@ async function main(argv) {
       case '-w':
       case '--wat': {
         options.wat = true;
-        break;
-      }
-
-      case '-g':
-      case '--grow': {
-        options.grow = true;
         break;
       }
 
