@@ -219,7 +219,8 @@ async function main(argv) {
 
       try {
         const imports = new Function('file', 'return import(file);');
-        json = await imports(url.pathToFileURL(file));
+        const mod = await imports(url.pathToFileURL(file));
+        json = mod['default'] || mod;
       } catch (e) {
         json = require(file);
       }
