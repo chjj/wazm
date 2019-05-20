@@ -16,7 +16,7 @@
   "author": "Christopher Jeffrey <chjjeffrey@gmail.com>",
   "main": "./lib/wazm.js",
   "bin": {
-    "bpkg": "./bin/bpkg"
+    "wazm": "./bin/wazm"
   },
   "scripts": {
     "lint": "eslint bin/* example/*.js lib/*.js test/*.js || exit 0",
