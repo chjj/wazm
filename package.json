@@ -1,6 +1,6 @@
 {
   "name": "wazm",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "WASM build tool",
   "keywords": [
     "assembly",
