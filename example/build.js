@@ -14,6 +14,8 @@ module.exports = {
     'keccak_final',
     'keccak_digest',
     'malloc',
+    'memcpy',
+    'memset',
     'free'
   ],
   memory: {
