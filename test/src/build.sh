@@ -12,16 +12,21 @@ CC=${SDK}/bin/clang
 LD=${SDK}/bin/wasm-ld
 SYSROOT=${SDK}/share/wasi-sysroot
 LD_PATH=${SDK}/share/wasi-sysroot/lib/wasm32-wasi
+BUILTINS=${SDK}/lib/clang/10.0.0/lib/wasi
 
-sources=(
+SOURCES=(
   'cant_dotdot'
   'clock_getres'
+  'create_symlink'
   'exitcode'
   'fd_prestat_get_refresh'
   'follow_symlink'
+  'freopen'
   'getentropy'
   'getrusage'
   'gettimeofday'
+  'link'
+  'main_args'
   'notdir'
   'poll'
   'preopen_populates'
@@ -34,30 +39,20 @@ sources=(
   'write_file'
 )
 
-cflags=(
+CFLAGS=(
   '-std=gnu11'
   '-Wall'
   '-Wextra'
   '--target=wasm32-wasi'
-  '--sysroot' "${SYSROOT}"
-)
-
-ldflags=(
-  '--allow-undefined'
-  '--strip-debug'
-  '-z' 'stack-size=5242880'
-  '--initial-memory=16777216'
-  '--max-memory=2147483648'
-  '--global-base=1024'
-  '--error-limit=0'
+  "--sysroot=${SYSROOT}"
+  '-s'
+  '-Wl,-z' '-Wl,stack-size=5242880'
+  '-Wl,--initial-memory=16777216'
+  '-Wl,--max-memory=2147483648'
 )
 
 set -ex
 
-for file in "${sources[@]}"; do
-  "$CC" -o "${file}.o" -c "${cflags[@]}" "${file}.c"
-  "$LD" -o "../wasm/${file}.wasm" "${ldflags[@]}" \
-    -L "${LD_PATH}" -lc "${file}.o" "${LD_PATH}/crt1.o"
+for file in "${SOURCES[@]}"; do
+  "$CC" -o "../wasm/${file}.wasm" "${CFLAGS[@]}" "${file}.c"
 done
-
-rm -f *.o

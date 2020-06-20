@@ -1,5 +1,3 @@
-// STDOUT: hello from input.txt\n
-
 #include <assert.h>
 #include <stdio.h>
 
@@ -9,7 +7,10 @@ int main() {
 
   char c = fgetc(file);
   while (c != EOF) {
-    assert(fputc(c, stdout) != EOF);
+    int wrote = fputc(c, stdout);
+    assert(wrote != EOF);
     c = fgetc(file);
   }
+
+  fputc('\n', stdout);
 }

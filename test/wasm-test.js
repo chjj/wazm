@@ -12,14 +12,18 @@ const WASM_DIR = path.resolve(__dirname, 'wasm');
 const tests = [
   'cant_dotdot.wasm',
   'clock_getres.wasm',
+  'create_symlink.wasm',
   'exitcode.wasm',
   'fd_prestat_get_refresh.wasm',
   'follow_symlink.wasm',
+  'freopen.wasm',
   'getentropy.wasm',
   'getrusage.wasm',
   'gettimeofday.wasm',
+  'link.wasm',
+  'main_args.wasm',
   'notdir.wasm',
-  // 'poll.wasm',
+  'poll.wasm',
   'preopen_populates.wasm',
   'read_file.wasm',
   'read_file_twice.wasm',
@@ -36,8 +40,18 @@ describe('WASM', function() {
 
     it(`should run wasm (${file})`, async () => {
       const code = fs.readFileSync(target);
+      const args = [];
+
+      if (file === 'main_args.wasm') {
+        args.push(
+          'foo',
+          '-bar',
+          '--baz=value'
+        );
+      }
 
       const wasm = new WASM(code, {
+        args,
         returnOnExit: true,
         preopens: {
           '/sandbox': path.resolve(__dirname, 'outer', 'sandbox'),
@@ -72,6 +86,7 @@ describe('WASM', function() {
       assert.strictEqual(binding.Hash.digest(msg).toString('hex'), expect);
 
       const hash = new binding.Hash();
+
       hash.init(256);
       hash.update(msg);
 

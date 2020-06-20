@@ -10,6 +10,6 @@ int main() {
 
   int nwritten = fprintf(file, "%s", message);
   assert(nwritten == strlen(message));
-
-  assert(fclose(file) == 0);
+  int r = fclose(file);
+  assert(r == 0);
 }

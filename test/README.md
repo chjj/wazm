@@ -1,6 +1,6 @@
 # test
 
-Several tests based on on devsnek/node-wasi:
+Several tests based on on nodejs/node:
 
-- Copyright (c) 2019, Gus Caplan (MIT License).
-- https://github.com/devsnek/node-wasi
+- Copyright Node.js contributors. All rights reserved.
+- https://github.com/nodejs/node/tree/master/test/wasi

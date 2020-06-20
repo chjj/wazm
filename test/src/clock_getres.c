@@ -3,10 +3,15 @@
 
 int main() {
   struct timespec ts;
+  int r;
 
   // supported clocks
-  assert(clock_getres(CLOCK_REALTIME, &ts) == 0);
-  assert(clock_getres(CLOCK_MONOTONIC, &ts) == 0);
-  assert(clock_getres(CLOCK_PROCESS_CPUTIME_ID, &ts) == 0);
-  assert(clock_getres(CLOCK_THREAD_CPUTIME_ID, &ts) == 0);
+  r = clock_getres(CLOCK_REALTIME, &ts);
+  assert(r == 0);
+  r = clock_getres(CLOCK_MONOTONIC, &ts);
+  assert(r == 0);
+  r = clock_getres(CLOCK_PROCESS_CPUTIME_ID, &ts);
+  assert(r == 0);
+  r = clock_getres(CLOCK_THREAD_CPUTIME_ID, &ts);
+  assert(r == 0);
 }

@@ -3,7 +3,8 @@
 
 int main() {
   char buf[256] = {0};
-  assert(getentropy(buf, 256) == 0);
+  int r = getentropy(buf, 256);
+  assert(r == 0);
 
   for (int i = 0; i < 256; i++) {
     if (buf[i] != 0) {

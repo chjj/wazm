@@ -1,1 +1,1 @@
-hello from the outside!
+this should be inaccessible
