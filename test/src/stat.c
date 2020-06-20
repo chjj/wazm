@@ -49,5 +49,8 @@ int main(void) {
   ret = stat(PATH, &st);
   assert(ret == -1);
 
+  ret = rmdir(OUTPUT_DIR);
+  assert(ret == 0);
+
   return 0;
 }
