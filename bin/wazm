@@ -25,20 +25,21 @@ const HELP = `
 
   Options:
 
-    -h, --help                output usage information
-    -v, --version             output the version number
-    -r, --root <path>         root directory (default: cwd)
-    -o, --output <file>       output file (default: out.wasm)
-    -e, --export <symbol>     export symbol
-    -m, --total-memory <mem>  total memory (in pages) (default: 3)
-    -S, --total-stack <mem>   total stack (in pages) (default: 1)
-    -M, --max-memory <mem>    total stack (in pages) (default: null)
-    -g, --grow                allow heap growth
-    -b, --base64              output as base64 module
-    -w, --wat                 output an accompanying .wat file
-    -O[x]                     optimization level
-    -s <OPTION=VALUE>         pass flag to emcc
-    -- <args>                 pass remaining args to emcc
+    -h, --help                 output usage information
+    -v, --version              output the version number
+    -r, --root <path>          root directory (default: cwd)
+    -o, --output <file>        output file (default: out.wasm)
+    -x, --executable           output executable binary (i.e. a non-library)
+    -b, --base64               output as base64 module
+    -w, --wat                  output an accompanying .wat file
+    -e, --export <symbol>      export symbol
+    -m, --initial-memory <mem> initial memory (in pages) (default: 3)
+    -S, --total-stack <mem>    total stack (in pages) (default: 1)
+    -M, --max-memory <mem>     total stack (in pages) (default: null)
+    -g, --grow                 allow heap growth
+    -O[x]                      optimization level
+    -s <OPTION=VALUE>          pass flag to emcc
+    -- <args>                  pass remaining args to emcc
 `;
 
 /*
@@ -50,19 +51,20 @@ async function main(argv) {
 
   const options = {
     root: null,
-    input: [],
-    output: null,
+    target: null,
+    executable: null,
+    base64: null,
+    wat: null,
+    sources: [],
     exports: [],
     memory: {
-      total: null,
+      initial: null,
       stack: null,
       max: null,
       grow: null
     },
-    base64: null,
-    wat: null,
-    args: [],
-    flags: []
+    flags: [],
+    settings: []
   };
 
   for (let i = 2; i < args.length; i++) {
@@ -104,9 +106,27 @@ async function main(argv) {
         if (!next || next[0] === '-')
           throw new Error(`Invalid option for: ${arg}.`);
 
-        options.output = next;
+        options.target = next;
         i += 1;
 
+        break;
+      }
+
+      case '-x':
+      case '--executable': {
+        options.executable = true;
+        break;
+      }
+
+      case '-b':
+      case '--base64': {
+        options.base64 = true;
+        break;
+      }
+
+      case '-w':
+      case '--wat': {
+        options.wat = true;
         break;
       }
 
@@ -122,11 +142,11 @@ async function main(argv) {
       }
 
       case '-m':
-      case '--total-memory': {
+      case '--initial-memory': {
         if (!next || next[0] === '-')
           throw new Error(`Invalid option for: ${arg}.`);
 
-        options.memory.total = next >>> 0;
+        options.memory.initial = next >>> 0;
         i += 1;
         break;
       }
@@ -157,25 +177,13 @@ async function main(argv) {
         break;
       }
 
-      case '-b':
-      case '--base64': {
-        options.base64 = true;
-        break;
-      }
-
-      case '-w':
-      case '--wat': {
-        options.wat = true;
-        break;
-      }
-
       case '-O0':
       case '-O1':
       case '-O2':
       case '-O3':
       case '-Os':
       case '-Oz': {
-        options.args.push(arg);
+        options.flags.push(arg);
         break;
       }
 
@@ -183,35 +191,35 @@ async function main(argv) {
         if (!next || next[0] === '-')
           throw new Error(`Invalid option for: ${arg}.`);
 
-        options.flags.push(next);
+        options.settings.push(next);
         i += 1;
         break;
       }
 
       case '--': {
-        options.args.push(...args.slice(i + 1));
+        options.flags.push(...args.slice(i + 1));
         i = args.length;
         break;
       }
 
       default: {
-        options.input.push(arg);
+        options.sources.push(arg);
         break;
       }
     }
   }
 
-  if (options.input.length === 1) {
-    const file = path.resolve(options.input[0]);
+  if (options.sources.length === 1) {
+    const file = path.resolve(options.sources[0]);
     const ext = path.extname(file);
 
     if (ext === '.json') {
       const text = fs.readFileSync(file, 'utf8');
       const json = JSON.parse(text);
 
-      options.input.length = 0;
+      options.sources.length = 0;
 
-      return build(mergeOptions(options, json));
+      return build(mergeAll(json, options));
     }
 
     if (ext === '.js' || ext === '.mjs' || ext === '.cjs') {
@@ -225,9 +233,9 @@ async function main(argv) {
         json = require(file);
       }
 
-      options.input.length = 0;
+      options.sources.length = 0;
 
-      return build(mergeOptions(options, json));
+      return build(mergeAll(json, options));
     }
   }
 
@@ -238,31 +246,45 @@ async function main(argv) {
  * Helpers
  */
 
-function mergeOptions(options, json) {
-  merge(options, json);
+function mergeAll(items, options) {
+  const out = [];
+
+  if (!Array.isArray(items))
+    items = [items];
+
+  for (const item of items)
+    out.push(mergeOptions(item, options));
+
+  return out;
+}
+
+function mergeOptions(json, options) {
+  json = merge(json, options);
 
   if (json != null) {
-    merge(options.memory, json.memory);
+    json.memory = merge(json.memory, options.memory);
 
-    if (Array.isArray(json.input))
-      options.input = [...json.input, ...options.input];
+    if (Array.isArray(json.sources))
+      json.sources = [...json.sources, ...options.sources];
 
     if (Array.isArray(json.exports))
-      options.exports = [...json.exports, ...options.exports];
+      json.exports = [...json.exports, ...options.exports];
+
+    if (Array.isArray(json.settings))
+      json.settings = [...json.settings, ...options.settings];
 
     if (Array.isArray(json.flags))
-      options.flags = [...json.flags, ...options.flags];
-
-    if (Array.isArray(json.args))
-      options.args = [...json.args, ...options.args];
+      json.flags = [...json.flags, ...options.flags];
   }
 
-  return options;
+  return json;
 }
 
 function merge(out, ...args) {
   if (out == null || typeof out !== 'object')
-    return out;
+    out = {};
+
+  out = Object.assign({}, out);
 
   for (const obj of args) {
     if (obj == null || typeof obj !== 'object')
@@ -271,7 +293,7 @@ function merge(out, ...args) {
     const keys = Object.keys(obj);
 
     for (const key of keys) {
-      if (out[key] == null)
+      if (obj[key] != null && typeof obj[key] !== 'object')
         out[key] = obj[key];
     }
   }

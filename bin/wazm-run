@@ -1,0 +1,92 @@
+#!/usr/bin/env node
+
+/*!
+ * wazm-run - wasm runner for wazm
+ * Copyright (c) 2019, Christopher Jeffrey (MIT License).
+ * https://github.com/chjj/wazm
+ */
+
+'use strict';
+
+const {join} = require('path');
+
+/*
+ * Main
+ */
+
+function main() {
+  const file = process.execPath || process.argv[0];
+  const argv = [join(__dirname, '_wazm-run')];
+
+  let wasi = false;
+  let bigint = false;
+
+  for (let i = 2; i < process.argv.length; i++) {
+    const arg = process.argv[i];
+
+    if (arg === '--use-wasi') {
+      wasi = true;
+      continue;
+    }
+
+    if (arg === '--use-bigint') {
+      bigint = true;
+      continue;
+    }
+
+    argv.push(arg);
+  }
+
+  const {spawn} = require('child_process');
+
+  const args = [];
+
+  if (wasi)
+    args.push('--experimental-wasi-unstable-preview1');
+
+  if (wasi || bigint)
+    args.push('--experimental-wasm-bigint');
+
+  args.push(...argv);
+
+  const ps = spawn(file, args, {
+    stdio: 'inherit'
+  });
+
+  const onSighup = () => ps.kill('SIGHUP');
+  const onSigint = () => ps.kill('SIGINT');
+  const onSigterm = () => ps.kill('SIGTERM');
+
+  process.on('SIGHUP', onSighup);
+  process.on('SIGINT', onSigint);
+  process.on('SIGTERM', onSigterm);
+
+  ps.on('error', (err) => {
+    if (err.code === 'ENOENT') {
+      process.stderr.write(`File not found: ${JSON.stringify(err.path)}.\n`);
+      process.exit(1);
+    }
+
+    process.stderr.write(`Child Process Error: ${err.message}\n`);
+    process.exit(1);
+  });
+
+  ps.on('exit', (code, signal) => {
+    process.removeListener('SIGHUP', onSighup);
+    process.removeListener('SIGINT', onSigint);
+    process.removeListener('SIGTERM', onSigterm);
+
+    process.on('exit', () => {
+      if (signal)
+        process.kill(process.pid, signal);
+      else
+        process.exit(code);
+    });
+  });
+}
+
+/*
+ * Execute
+ */
+
+main();

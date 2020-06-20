@@ -2,30 +2,28 @@
 
 module.exports = {
   root: __dirname,
-  output: 'keccak',
-  input: [
+  target: 'keccak',
+  sources: [
     'src/keccak.c'
   ],
   exports: [
-    'keccak_ctx_sizeof',
-    'keccak_alloc',
-    'keccak_init',
-    'keccak_update',
-    'keccak_final',
-    'keccak_digest',
-    'malloc',
-    'memcpy',
-    'memset',
-    'free'
+    '_keccak_ctx_sizeof',
+    '_keccak_alloc',
+    '_keccak_init',
+    '_keccak_update',
+    '_keccak_final',
+    '_keccak_digest',
+    '_memcpy',
+    '_memset'
   ],
   memory: {
-    total: 3,
-    stack: 1,
+    initial: 10 << 20,
+    stack: 1 << 20,
     max: null
   },
   base64: true,
   wat: true,
-  args: [
-    '-O2'
+  flags: [
+    '-O3'
   ]
 };

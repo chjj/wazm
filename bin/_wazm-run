@@ -1,0 +1,33 @@
+#!/usr/bin/env node
+
+/*!
+ * _wazm-run - wasm runner for wazm
+ * Copyright (c) 2019, Christopher Jeffrey (MIT License).
+ * https://github.com/chjj/wazm
+ */
+
+'use strict';
+
+const path = require('path');
+const fs = require('fs');
+const WASM = require('../');
+const file = process.argv[2];
+
+if (!file) {
+  console.error('Must pass file.');
+  process.exit(1);
+}
+
+let code;
+
+if (path.extname(file) === '.js')
+  code = require(path.resolve(file));
+else
+  code = fs.readFileSync(file);
+
+const wasm = new WASM(code, {
+  args: process.argv.slice(2),
+  env: process.env
+});
+
+wasm.start();

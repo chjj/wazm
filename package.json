@@ -16,13 +16,18 @@
   "author": "Christopher Jeffrey <chjjeffrey@gmail.com>",
   "main": "./lib/wazm.js",
   "bin": {
-    "wazm": "./bin/wazm"
+    "wazm": "./bin/wazm",
+    "wazm-run": "./bin/wazm-run"
   },
   "scripts": {
-    "lint": "eslint bin/* example/*.js lib/*.js test/*.js || exit 0",
+    "lint": "eslint bin/* example/*.js lib/*.js lib/backend/*.js test/*.js || exit 0",
     "test": "bmocha --reporter spec test/*-test.js"
   },
   "engines": {
     "node": ">=8.0.0"
+  },
+  "browser": {
+    "./lib/wasi": "./lib/wasi-browser.js",
+    "./lib/backend/io": "./lib/backend/io-browser.js"
   }
 }
