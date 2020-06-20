@@ -6,7 +6,7 @@ int main() {
   struct timeval tv1;
   gettimeofday(&tv1, NULL);
 
-  for (int i = 0; i < 1000; i++) {
+  for (int i = 0; i < 1000000; i++) {
   }
 
   struct timeval tv2;

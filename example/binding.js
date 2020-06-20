@@ -4,7 +4,7 @@ const WASM = require('../');
 const wasm = new WASM(require('./keccak.wasm.js'));
 
 function hashSlow(data) {
-  const ksize = wasm.sizeof('keccak_ctx');
+  const ksize = wasm.call('keccak_ctx_sizeof');
   const save = wasm.save();
   const ctx = wasm.alloc(ksize);
   const out = wasm.alloc(32);
@@ -21,7 +21,7 @@ function hashSlow(data) {
 
 class Hash {
   constructor() {
-    this.ctx = Buffer.allocUnsafe(wasm.sizeof('keccak_ctx'));
+    this.ctx = Buffer.allocUnsafe(wasm.call('keccak_ctx_sizeof'));
   }
 
   init(bits = 256) {
