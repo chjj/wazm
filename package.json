@@ -21,7 +21,7 @@
   },
   "scripts": {
     "lint": "eslint bin/* example/*.js lib/*.js lib/backend/*.js test/*.js || exit 0",
-    "test": "bmocha --reporter spec test/*-test.js"
+    "test": "bmocha --experimental-wasm-bigint --reporter spec test/*-test.js"
   },
   "engines": {
     "node": ">=8.0.0"
