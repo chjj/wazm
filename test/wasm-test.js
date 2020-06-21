@@ -2,14 +2,13 @@
 
 const assert = require('assert');
 const fs = require('fs');
-const os = require('os');
 const path = require('path');
 const WASM = require('../');
 const binding = require('../example/binding');
 const vectors = require('./data/sha3-256.json');
 const WASM_DIR = path.resolve(__dirname, 'wasm');
 
-const tests = [
+const testsNode = [
   'cant_dotdot.wasm',
   'clock_getres.wasm',
   'create_symlink.wasm',
@@ -34,7 +33,22 @@ const tests = [
   'write_file.wasm'
 ];
 
+// --enable-experimental-webassembly-features
+const testsBrowser = [
+  'clock_getres.wasm',
+  'exitcode.wasm',
+  'fd_prestat_get_refresh.wasm',
+  'getentropy.wasm',
+  // 'getrusage.wasm',
+  // 'gettimeofday.wasm',
+  'main_args.wasm',
+  'preopen_populates.wasm'
+  // 'poll.wasm'
+];
+
 describe('WASM', function() {
+  const tests = process.browser ? testsBrowser : testsNode;
+
   for (const file of tests) {
     const target = path.resolve(WASM_DIR, file);
 
@@ -52,10 +66,13 @@ describe('WASM', function() {
 
       const wasm = new WASM(code, {
         args,
+        env: {
+          NODE_PLATFORM: 'win32'
+        },
         returnOnExit: true,
         preopens: {
           '/sandbox': path.resolve(__dirname, 'outer', 'sandbox'),
-          '/tmp': os.tmpdir()
+          '/tmp': path.resolve(__dirname, 'outer', 'tmp')
         }
       });
 
@@ -75,7 +92,6 @@ describe('WASM', function() {
 
     for (const [msg_, arg, key, expect] of vectors) {
       const msg = Buffer.from(msg_, 'hex');
-      const text = expect.slice(0, 32) + '...';
 
       if (arg != null || key != null)
         continue;

@@ -13,5 +13,7 @@ int main() {
   assert(0 == link(OLD, NEW));
   assert(0 == stat(NEW, &st_new));
   assert(st_old.st_ino == st_new.st_ino);
+  assert(0 == unlink(NEW));
+
   return 0;
 }
