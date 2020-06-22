@@ -16,7 +16,6 @@
   "author": "Christopher Jeffrey <chjjeffrey@gmail.com>",
   "main": "./lib/wazm.js",
   "bin": {
-    "wazm": "./bin/wazm",
     "wazm-run": "./bin/wazm-run"
   },
   "scripts": {

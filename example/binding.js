@@ -1,97 +1,100 @@
 'use strict';
 
+const assert = require('assert');
+const fs = require('fs');
 const WASM = require('../');
-const wasm = new WASM(require('./keccak.wasm.js'));
+const {types} = WASM;
+
+const code = fs.readFileSync(`${__dirname}/keccak.wasm`);
+const wasm = new WASM(code, {
+  stackSize: 2 ** 20
+});
 
 function hashSlow(data) {
-  const ksize = wasm.call('keccak_ctx_sizeof');
-  const save = wasm.save();
-  const ctx = wasm.alloc(ksize);
-  const out = wasm.alloc(32);
+  const sizeof = wasm.exports.keccak_ctx_sizeof();
 
-  try {
-    wasm.throws('keccak_init', ctx, 256);
-    wasm.call('keccak_update', ctx, data, data.length);
-    wasm.throws('keccak_final', ctx, out, 0, 32, 0x06);
-    return wasm.read(out, 32);
-  } finally {
-    wasm.restore(save);
-  }
+  return wasm.safe(() => {
+    const ctx = wasm.alloc(sizeof);
+    const out = wasm.alloc(32);
+    const ptr = wasm.write(data, types.buffer);
+
+    assert(wasm.exports.keccak_init(ctx, 256));
+
+    wasm.exports.keccak_update(ctx, ptr, data.length);
+
+    assert(wasm.exports.keccak_final(ctx, out, 0, 32, 0x06));
+
+    return wasm.read(out, types.buffer, 32);
+  });
 }
 
 class Hash {
   constructor() {
-    this.ctx = Buffer.allocUnsafe(wasm.call('keccak_ctx_sizeof'));
+    this.ctx = 0;
   }
 
   init(bits = 256) {
-    const save = wasm.save();
-    const ctx = wasm.alloc(this.ctx.length);
+    const sizeof = wasm.exports.keccak_ctx_sizeof();
 
-    try {
-      wasm.throws('keccak_init', ctx, bits);
-      wasm.copy(ctx, this.ctx);
-    } finally {
-      wasm.restore(save);
-    }
+    this.ctx = wasm.malloc(sizeof);
+
+    assert(wasm.exports.keccak_init(this.ctx, bits));
   }
 
   update(data) {
-    const save = wasm.save();
-    const ctx = wasm.push(this.ctx);
+    return wasm.safe(() => {
+      const ptr = wasm.write(data, types.buffer);
 
-    wasm.call('keccak_update', ctx, data, data.length);
-    wasm.copy(ctx, this.ctx);
-    wasm.restore(save);
+      wasm.exports.keccak_update(this.ctx, ptr, data.length);
+    });
   }
 
   final(size = 32, pad = 0x06) {
-    const save = wasm.save();
-    const out = wasm.alloc(size);
+    return wasm.safe(() => {
+      const out = wasm.alloc(size);
 
-    try {
-      wasm.throws('keccak_final', this.ctx, out, 0, size, pad);
-      return wasm.read(out, size);
-    } finally {
-      wasm.restore(save);
-    }
+      assert(wasm.exports.keccak_final(this.ctx, out, 0, size, pad));
+
+      wasm.free(this.ctx);
+
+      this.ctx = 0;
+
+      return wasm.read(out, types.buffer, size);
+    });
   }
 
   static digest(data, size = 32, pad = 0x06) {
-    const save = wasm.save(); // In theory these are the
-    const out = wasm.alloc(size); // same pointers.
+    return wasm.safe(() => {
+      const out = wasm.alloc(size);
+      const ptr = wasm.write(data, types.buffer);
 
-    wasm.call('keccak_digest', out, data, data.length, size, pad);
-    wasm.restore(save);
+      wasm.exports.keccak_digest(out, ptr, data.length, size, pad);
 
-    return wasm.read(out, size);
+      return wasm.read(out, types.buffer, size);
+    });
   }
 }
 
 function hash(data) {
-  const save = wasm.save(); // In theory these are the
-  const out = wasm.alloc(32); // same pointers.
+  return wasm.safe(() => {
+    const out = wasm.alloc(32);
+    const ptr = wasm.write(data, types.buffer);
 
-  wasm.call('keccak_digest', out, data, data.length, 32, 0x06);
-  wasm.restore(save);
+    wasm.exports.keccak_digest(out, ptr, data.length, 32, 0x06);
 
-  return wasm.read(out, 32);
+    return wasm.read(out, types.buffer, 32);
+  });
 }
 
 function hashHeap(data) {
-  // This copies the data to the heap
-  // first to avoid a stack overflow.
-  const save = wasm.save();
-  const [input, heap] = wasm.maybePush(data, save);
-  const out = wasm.alloc(32);
+  return wasm.safe(() => {
+    const out = wasm.alloc(32);
+    const ptr = wasm.write(data, types.buffer);
 
-  wasm.call('keccak_digest', out, input, data.length, 32, 0x06);
-  wasm.restore(save);
+    wasm.exports.keccak_digest(out, ptr, data.length, 32, 0x06);
 
-  if (heap)
-    wasm.free(input);
-
-  return wasm.read(out, 32);
+    return wasm.read(out, types.buffer, 32);
+  });
 }
 
 exports.hashSlow = hashSlow;

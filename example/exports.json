@@ -1,0 +1,12 @@
+[
+  "_keccak_ctx_sizeof",
+  "_keccak_alloc",
+  "_keccak_init",
+  "_keccak_update",
+  "_keccak_final",
+  "_keccak_digest",
+  "_malloc",
+  "_free",
+  "_memcpy",
+  "_memset"
+]
