@@ -38,10 +38,14 @@ class Hash {
 
     this.ctx = wasm.malloc(sizeof);
 
+    assert(this.ctx);
+
     assert(wasm.exports.keccak_init(this.ctx, bits));
   }
 
   update(data) {
+    assert(this.ctx);
+
     return wasm.safe(() => {
       const ptr = wasm.write(data, types.buffer);
 
@@ -50,6 +54,8 @@ class Hash {
   }
 
   final(size = 32, pad = 0x06) {
+    assert(this.ctx);
+
     return wasm.safe(() => {
       const out = wasm.alloc(size);
 
@@ -89,9 +95,11 @@ function hash(data) {
 function hashHeap(data) {
   return wasm.safe(() => {
     const out = wasm.alloc(32);
-    const ptr = wasm.write(data, types.buffer);
+    const ptr = wasm.write(data, types.buffer, 1);
 
     wasm.exports.keccak_digest(out, ptr, data.length, 32, 0x06);
+
+    wasm.free(ptr);
 
     return wasm.read(out, types.buffer, 32);
   });

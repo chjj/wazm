@@ -20,18 +20,23 @@ function main() {
 
   let wasi = false;
   let bigint = false;
+  let done = false;
 
   for (let i = 2; i < process.argv.length; i++) {
     const arg = process.argv[i];
 
-    if (arg === '--use-wasi') {
-      wasi = true;
-      continue;
-    }
+    if (!done) {
+      if (arg === '--use-wasi') {
+        wasi = true;
+        continue;
+      }
 
-    if (arg === '--use-bigint') {
-      bigint = true;
-      continue;
+      if (arg === '--use-bigint') {
+        bigint = true;
+        continue;
+      }
+
+      done = true;
     }
 
     argv.push(arg);
@@ -62,11 +67,6 @@ function main() {
   process.on('SIGTERM', onSigterm);
 
   ps.on('error', (err) => {
-    if (err.code === 'ENOENT') {
-      process.stderr.write(`File not found: ${JSON.stringify(err.path)}.\n`);
-      process.exit(1);
-    }
-
     process.stderr.write(`Child Process Error: ${err.message}\n`);
     process.exit(1);
   });
